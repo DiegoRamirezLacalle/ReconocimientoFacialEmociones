@@ -12,7 +12,6 @@ Requires-Dist: scipy>=1.10.0
 Requires-Dist: torch>=2.1.0
 Requires-Dist: torchvision>=0.16.0
 Requires-Dist: timm>=1.0.3
-Requires-Dist: transformers>=4.44.0
 Requires-Dist: albumentations>=1.4.0
 Requires-Dist: opencv-python>=4.9.0
 Requires-Dist: mediapipe>=0.10.0

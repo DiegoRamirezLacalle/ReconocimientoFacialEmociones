@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconocimiento de Emociones (CNN vs ViT)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { color: #333; }
+        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%; }
+        video { width: 100%; border-radius: 8px; background: #000; transform: scaleX(-1); }
+        .controls { margin: 15px 0; display: flex; justify-content: center; gap: 10px; }
+        button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button.active { background-color: #007bff; color: white; }
+        button:not(.active) { background-color: #e4e6eb; color: #333; }
+        
+        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f8f9fa; border: 2px solid #e9ecef; }
+        .emotion { font-size: 2em; font-weight: bold; color: #2c3e50; }
+        .prob { color: #666; font-size: 0.9em; }
+        .loading { color: #aaa; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Detector de Emociones</h1>
+        
+        <div class="controls">
+            <button id="btn-cnn" class="active" onclick="switchModel('cnn')">Modelo CNN</button>
+            <button id="btn-vit" onclick="switchModel('vit')">Modelo ViT</button>
+        </div>
+
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <div class="result-box">
+            <div id="emotion-text" class="emotion">Esperando...</div>
+            <div id="prob-text" class="prob">Probabilidad: -</div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const emotionText = document.getElementById('emotion-text');
+        const probText = document.getElementById('prob-text');
+        let currentModel = 'cnn';
+        let isProcessing = false;
+
+        // 1. Iniciar Webcam
+        navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 400 } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => console.error("Error webcam:", err));
+
+        // 2. Cambiar Modelo
+        async function switchModel(model) {
+            currentModel = model;
+            document.getElementById('btn-cnn').className = model === 'cnn' ? 'active' : '';
+            document.getElementById('btn-vit').className = model === 'vit' ? 'active' : '';
+            
+            emotionText.innerText = "Cargando modelo...";
+            try {
+                await fetch(`http://127.0.0.1:8000/switch-model/${model}`, { method: 'POST' });
+                emotionText.innerText = "Modelo listo";
+            } catch (e) {
+                emotionText.innerText = "Error cambiando modelo";
+            }
+        }
+
+        // 3. Bucle de Inferencia (cada 500ms)
+        setInterval(async () => {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) { isProcessing = false; return; }
+                
+                const formData = new FormData();
+                formData.append('file', blob, 'image.jpg');
+
+                try {
+                    const res = await fetch('http://127.0.0.1:8000/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    
+                    emotionText.innerText = data.emotion;
+                    probText.innerText = `Probabilidad: ${(data.probability * 100).toFixed(1)}% (${data.model})`;
+                    
+                    // Colores según emoción (visual feedback)
+                    const colors = { 'Happy': '#28a745', 'Angry': '#dc3545', 'Sad': '#6c757d', 'Neutral': '#333' };
+                    emotionText.style.color = colors[data.emotion] || '#333';
+
+                } catch (err) {
+                    console.error("Error inferencia:", err);
+                }
+                isProcessing = false;
+            }, 'image/jpeg');
+        }, 300); // Frecuencia de envío
+    </script>
+</body>
+</html>

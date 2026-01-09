@@ -76,13 +76,13 @@ class EmotionPredictor:
 
         self.model.to(self.device)
         self.model.eval()
+# En inference.py inside EmotionPredictor class
 
     def predict(self, image):
         # Preprocesamiento
         if self.model_type == "cnn":
             inputs = self.transform(image).unsqueeze(0).to(self.device)
         else:
-            # ViT usa el procesador (espera RGB)
             inputs = self.processor(images=image, return_tensors="pt").to(self.device)
 
         # Inferencia
@@ -93,7 +93,13 @@ class EmotionPredictor:
                 outputs = self.model(**inputs)
                 logits = outputs.logits
 
+            # Aplicar Softmax para obtener probabilidades (0 a 1)
             probs = torch.nn.functional.softmax(logits, dim=1)
-            top_prob, top_class_id = torch.max(probs, 1)
-
-            return EMOTION_LABELS[top_class_id.item()], top_prob.item()
+            
+            # Convertir a lista de Python
+            probs_list = probs[0].tolist()
+            
+            # Crear diccionario { "Happy": 0.85, "Sad": 0.02, ... }
+            result = {label: score for label, score in zip(EMOTION_LABELS, probs_list)}
+            
+            return result

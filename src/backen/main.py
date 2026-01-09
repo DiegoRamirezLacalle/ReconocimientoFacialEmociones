@@ -19,8 +19,8 @@ app.add_middleware(
 # --- CONFIGURACIÓN DE RUTAS A TUS MODELOS ---
 
 MODEL_PATHS = {
-    "cnn": "notebooks/cnn_best_exp1.pt",
-    "vit": "notebooks/vit_emotions.pt" 
+    "cnn": "src/fer/train/cnn_best_exp1.pt",
+    "vit": "src/fer/train/vit_emotions.pt" 
 }
 
 predictor = None
@@ -56,6 +56,8 @@ def switch_model(model_name: str):
     load_predictor(model_name)
     return {"msg": f"Cambiado a {model_name}"}
 
+# En main.py, modifica la función predict:
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if not predictor:
@@ -64,9 +66,14 @@ async def predict(file: UploadFile = File(...)):
     image_data = await file.read()
     image = Image.open(io.BytesIO(image_data)).convert("RGB")
     
-    emotion, prob = predictor.predict(image)
+    # Ahora 'predictions' es el diccionario con todas las emociones
+    predictions = predictor.predict(image)
+    
+    # Encontramos la emoción dominante para enviarla también explícitamente (opcional, pero útil)
+    dominant_emotion = max(predictions, key=predictions.get)
+    
     return {
-        "emotion": emotion,
-        "probability": round(prob, 4),
+        "dominant_emotion": dominant_emotion,
+        "predictions": predictions, # Enviamos todas
         "model": current_model_name
     }

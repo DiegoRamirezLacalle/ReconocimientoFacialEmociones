@@ -3,106 +3,324 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reconocimiento de Emociones (CNN vs ViT)</title>
+    <title>Reconocimiento de emociones</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        h1 { color: #333; }
-        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%; }
-        video { width: 100%; border-radius: 8px; background: #000; transform: scaleX(-1); }
-        .controls { margin: 15px 0; display: flex; justify-content: center; gap: 10px; }
-        button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button.active { background-color: #007bff; color: white; }
-        button:not(.active) { background-color: #e4e6eb; color: #333; }
+        :root {
+            --deusto-blue: #003DA5;
+            --deusto-dark: #00286e;
+            --bg-color: #f0f5fa;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sec: #6b7280;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Centrar verticalmente en la pantalla */
+            min-height: 100vh;
+            color: var(--text-main);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* Aquí reducimos el margen entre columnas */
+            gap: 30px; 
+            max-width: 1000px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 61, 165, 0.1);
+            border-top: 6px solid var(--deusto-blue);
+            
+            /* CLAVE: Alinea el contenido de la derecha al centro verticalmente respecto al vídeo */
+            align-items: center; 
+        }
+
+        /* --- COLUMNA IZQUIERDA --- */
+        .visual-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: var(--deusto-blue); font-weight: 700; }
+        .subtitle { margin-bottom: 15px; font-size: 0.9rem; color: var(--text-sec); }
+
+        .media-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px; /* Margen reducido */
+        }
+
+        video, img { width: 100%; height: 100%; object-fit: cover; }
+        video { transform: scaleX(-1); }
+
+        /* Controles */
+        .controls-group { display: flex; flex-direction: column; gap: 10px; }
+        .controls-row { display: flex; gap: 10px; }
+
+        button {
+            flex: 1; padding: 10px; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: 600; font-size: 0.85rem;
+            transition: all 0.2s; background: #f1f5f9; color: var(--text-sec);
+        }
+        button.active { background-color: var(--deusto-blue); color: white; box-shadow: 0 3px 5px rgba(0, 61, 165, 0.2); }
+        button:hover:not(.active) { background: #e2e8f0; color: var(--deusto-blue); }
+
+        input[type="file"] { display: none; }
+        .custom-file-upload {
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px; cursor: pointer; background: #ffffff;
+            border: 2px dashed #cbd5e1; border-radius: 8px;
+            color: var(--text-sec); font-weight: 600; font-size: 0.9rem;
+            width: 100%; box-sizing: border-box; transition: all 0.2s;
+        }
+        .custom-file-upload:hover { border-color: var(--deusto-blue); color: var(--deusto-blue); background: #f8fafc; }
+
+        /* --- COLUMNA DERECHA COMPACTA --- */
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            /* Eliminamos height:100% para que no se estire forzadamente */
+            justify-content: center; 
+        }
+
+        .dominant-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .dominant-label { font-size: 0.8rem; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; }
+        .dominant-value { font-size: 2.5rem; font-weight: 800; margin: 5px 0; color: var(--text-main); }
+
+        /* LISTA COMPACTA */
+        .emotion-list { 
+            display: flex; 
+            flex-direction: column; 
+            /* Gap fijo y razonable en vez de space-between */
+            gap: 12px; 
+        }
+
+        .emotion-item { display: flex; align-items: center; font-size: 0.9rem; }
+        .emotion-name { width: 70px; font-weight: 600; color: var(--text-main); }
         
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f8f9fa; border: 2px solid #e9ecef; }
-        .emotion { font-size: 2em; font-weight: bold; color: #2c3e50; }
-        .prob { color: #666; font-size: 0.9em; }
-        .loading { color: #aaa; font-style: italic; }
+        .bar-container { 
+            flex-grow: 1; 
+            height: 14px; /* Altura estándar */
+            background: #e5e7eb; 
+            border-radius: 7px; 
+            overflow: hidden; 
+            margin: 0 12px; 
+        }
+        
+        .bar-fill { height: 100%; width: 0%; border-radius: 7px; transition: width 0.4s ease; }
+        .emotion-percent { width: 40px; text-align: right; color: var(--text-sec); font-size: 0.85rem; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .dashboard { grid-template-columns: 1fr; padding: 20px; gap: 20px; }
+            .stats-section { margin-top: 10px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Detector de Emociones</h1>
-        
-        <div class="controls">
-            <button id="btn-cnn" class="active" onclick="switchModel('cnn')">Modelo CNN</button>
-            <button id="btn-vit" onclick="switchModel('vit')">Modelo ViT</button>
+    <div class="dashboard">
+        <div class="visual-section">
+            <h1>Reconocimiento de Emociones</h1>
+            <span class="subtitle">by Diego Ramirez & Jorge Clausen</span>
+
+            <div class="media-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <img id="uploaded-image" style="display: none;" alt="Preview">
+            </div>
+            
+            <div class="controls-group">
+                <div class="controls-row">
+                    <button id="btn-webcam" class="active" onclick="setSource('webcam')">📷 Webcam</button>
+                    <button id="btn-upload" onclick="setSource('upload')">📂 Subir Foto</button>
+                </div>
+
+                <div id="upload-container" style="display:none;">
+                    <label for="file-input" class="custom-file-upload">
+                        Seleccionar imagen...
+                    </label>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
+
+                <div class="controls-row">
+                    <button id="btn-cnn" class="active" onclick="switchModel('cnn')">Modelo CNN</button>
+                    <button id="btn-vit" onclick="switchModel('vit')">Modelo ViT</button>
+                </div>
+                
+                <p style="font-size: 0.75rem; color: #aaa; text-align: center; margin: 5px 0 0 0;" id="status-text">Sistema listo</p>
+            </div>
         </div>
 
-        <video id="video" autoplay playsinline></video>
-        <canvas id="canvas" style="display:none;"></canvas>
+        <div class="stats-section">
+            <div class="dominant-wrapper">
+                <div class="dominant-label">Emoción Detectada</div>
+                <div id="dominant-text" class="dominant-value">---</div>
+            </div>
 
-        <div class="result-box">
-            <div id="emotion-text" class="emotion">Esperando...</div>
-            <div id="prob-text" class="prob">Probabilidad: -</div>
+            <div class="emotion-list" id="emotion-list">
+                </div>
         </div>
     </div>
 
+    <canvas id="canvas" style="display:none;"></canvas>
+
     <script>
+        const EMOTIONS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral'];
+        const COLORS = {
+            'Angry': '#ef4444', 'Disgust': '#10b981', 'Fear': '#8b5cf6',
+            'Happy': '#f59e0b', 'Sad': '#3b82f6', 'Surprise': '#ec4899', 'Neutral': '#9ca3af'
+        };
+
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const emotionText = document.getElementById('emotion-text');
-        const probText = document.getElementById('prob-text');
-        let currentModel = 'cnn';
+        const imgPreview = document.getElementById('uploaded-image');
+        const fileInput = document.getElementById('file-input');
+        const uploadContainer = document.getElementById('upload-container');
+        const dominantText = document.getElementById('dominant-text');
+        const statusText = document.getElementById('status-text');
+        
+        let isWebcamActive = true;
         let isProcessing = false;
+        let inferInterval = null;
 
-        // 1. Iniciar Webcam
-        navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 400 } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => console.error("Error webcam:", err));
+        const listContainer = document.getElementById('emotion-list');
+        EMOTIONS.forEach(emo => {
+            listContainer.innerHTML += `
+                <div class="emotion-item">
+                    <span class="emotion-name">${emo}</span>
+                    <div class="bar-container">
+                        <div id="bar-${emo}" class="bar-fill" style="background-color: ${COLORS[emo]}"></div>
+                    </div>
+                    <span id="pct-${emo}" class="emotion-percent">0%</span>
+                </div>`;
+        });
 
-        // 2. Cambiar Modelo
-        async function switchModel(model) {
-            currentModel = model;
-            document.getElementById('btn-cnn').className = model === 'cnn' ? 'active' : '';
-            document.getElementById('btn-vit').className = model === 'vit' ? 'active' : '';
-            
-            emotionText.innerText = "Cargando modelo...";
-            try {
-                await fetch(`http://127.0.0.1:8000/switch-model/${model}`, { method: 'POST' });
-                emotionText.innerText = "Modelo listo";
-            } catch (e) {
-                emotionText.innerText = "Error cambiando modelo";
+        startWebcam();
+
+        function setSource(source) {
+            isWebcamActive = (source === 'webcam');
+            document.getElementById('btn-webcam').className = isWebcamActive ? 'active' : '';
+            document.getElementById('btn-upload').className = !isWebcamActive ? 'active' : '';
+
+            if (isWebcamActive) {
+                uploadContainer.style.display = 'none';
+                imgPreview.style.display = 'none';
+                video.style.display = 'block';
+                startWebcam();
+                statusText.innerText = "Modo: Video en vivo";
+            } else {
+                stopWebcamLoop();
+                video.style.display = 'none';
+                imgPreview.style.display = 'block';
+                uploadContainer.style.display = 'block';
+                imgPreview.src = "https://via.placeholder.com/400?text=Sube+una+foto"; 
+                statusText.innerText = "Modo: Imagen estática";
+                resetBars();
             }
         }
 
-        // 3. Bucle de Inferencia (cada 500ms)
-        setInterval(async () => {
-            if (isProcessing) return;
-            isProcessing = true;
+        function startWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 400 } })
+                .then(stream => { 
+                    video.srcObject = stream; 
+                    if (inferInterval) clearInterval(inferInterval);
+                    inferInterval = setInterval(captureAndPredict, 250);
+                })
+                .catch(err => console.error("Error webcam:", err));
+        }
 
+        function stopWebcamLoop() {
+            if (inferInterval) clearInterval(inferInterval);
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            imgPreview.src = URL.createObjectURL(file);
+            statusText.innerText = "Analizando...";
+            const formData = new FormData();
+            formData.append('file', file);
+            await sendPredictionRequest(formData);
+            statusText.innerText = "Análisis completado";
+        });
+
+        async function captureAndPredict() {
+            if (isProcessing || !isWebcamActive) return;
+            isProcessing = true;
+            const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+            
             canvas.toBlob(async (blob) => {
-                if (!blob) { isProcessing = false; return; }
-                
-                const formData = new FormData();
-                formData.append('file', blob, 'image.jpg');
-
-                try {
-                    const res = await fetch('http://127.0.0.1:8000/predict', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-                    
-                    emotionText.innerText = data.emotion;
-                    probText.innerText = `Probabilidad: ${(data.probability * 100).toFixed(1)}% (${data.model})`;
-                    
-                    // Colores según emoción (visual feedback)
-                    const colors = { 'Happy': '#28a745', 'Angry': '#dc3545', 'Sad': '#6c757d', 'Neutral': '#333' };
-                    emotionText.style.color = colors[data.emotion] || '#333';
-
-                } catch (err) {
-                    console.error("Error inferencia:", err);
+                if(blob) {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'capture.jpg');
+                    await sendPredictionRequest(formData);
                 }
                 isProcessing = false;
             }, 'image/jpeg');
-        }, 300); // Frecuencia de envío
+        }
+
+        async function sendPredictionRequest(formData) {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/predict', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                dominantText.innerText = data.dominant_emotion;
+                dominantText.style.color = COLORS[data.dominant_emotion];
+                
+                const preds = data.predictions;
+                for (const [emo, score] of Object.entries(preds)) {
+                    const pct = (score * 100).toFixed(1);
+                    document.getElementById(`bar-${emo}`).style.width = `${pct}%`;
+                    document.getElementById(`pct-${emo}`).innerText = `${pct}%`;
+                    document.getElementById(`bar-${emo}`).style.opacity = score < 0.05 ? '0.3' : '1';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function resetBars() {
+            dominantText.innerText = "---";
+            dominantText.style.color = "#333";
+            EMOTIONS.forEach(emo => {
+                document.getElementById(`bar-${emo}`).style.width = '0%';
+                document.getElementById(`pct-${emo}`).innerText = '0%';
+            });
+        }
+
+        async function switchModel(model) {
+            document.getElementById('btn-cnn').className = model === 'cnn' ? 'active' : '';
+            document.getElementById('btn-vit').className = model === 'vit' ? 'active' : '';
+            statusText.innerText = "Cargando modelo...";
+            await fetch(`http://127.0.0.1:8000/switch-model/${model}`, { method: 'POST' });
+            statusText.innerText = `Modelo activo: ${model.toUpperCase()}`;
+        }
     </script>
 </body>
 </html>

@@ -164,7 +164,7 @@
                 </div>
 
                 <div class="controls-row">
-                    <button id="btn-cnn" class="active" onclick="switchModel('cnn')">Modelo CNN</button>
+                    <button id="btn-resnet" class="active" onclick="switchModel('resnet')">Modelo CNN</button>
                     <button id="btn-vit" onclick="switchModel('vit')">Modelo ViT</button>
                 </div>
                 
@@ -315,7 +315,7 @@
         }
 
         async function switchModel(model) {
-            document.getElementById('btn-cnn').className = model === 'cnn' ? 'active' : '';
+            document.getElementById('btn-resnet').className = model === 'resnet' ? 'active' : '';
             document.getElementById('btn-vit').className = model === 'vit' ? 'active' : '';
             statusText.innerText = "Cargando modelo...";
             await fetch(`http://127.0.0.1:8000/switch-model/${model}`, { method: 'POST' });

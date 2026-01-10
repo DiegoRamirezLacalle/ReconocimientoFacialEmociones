@@ -1,0 +1,36 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+data/
+reports/
+build/
+dist/
+*.egg-info/
+wandb/
+mlruns/
+
+.ipynb_checkpoints/
+src/fer/train/*.ipynb
+src/fer/train/*.png
+src/fer/train/*.jpg
+src/fer/train/*.jpeg
+
+# Si tienes dumps grandes, caches, etc.
+**/.cache/
+**/cache/
+
+
+docker/
+**/*.log
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.cache/
+
+# si tienes datasets grandes o cosas pesadas
+data/**
+reports/**

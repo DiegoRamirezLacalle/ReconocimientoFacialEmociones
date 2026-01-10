@@ -22,12 +22,11 @@ def get_base_model(device):
 def get_transforms():
     """
     Devuelve las transformaciones para (Train, Validation).
-    Configuración 'Limpia': Sin borrado ni blanco y negro para facilitar la tarea.
     """
-    # Train: Aumentación ligera (Espejo, rotación suave y luz)
+    # Train: Aumentación ligera 
     train_transform = T.Compose([
         T.Resize((224, 224)),
-        T.RandomHorizontalFlip(p=0.5),
+        T.RandomHorizontalFlip(),
         T.RandomRotation(15),
         T.ColorJitter(brightness=0.2, contrast=0.2),
         T.ToTensor(),
